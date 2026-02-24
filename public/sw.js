@@ -12,14 +12,24 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Solo manejar peticiones GET
+    if (event.request.method !== 'GET') return;
+
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
+                // Si la respuesta es válida, clonarla y guardarla en caché
+                if (response && response.status === 200) {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
                 }
-                return fetch(event.request);
+                return response;
+            })
+            .catch(() => {
+                // Si falla la red, intentar buscar en caché
+                return caches.match(event.request);
             })
     );
 });
