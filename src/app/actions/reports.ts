@@ -21,7 +21,10 @@ export async function getReportData() {
         .select('amount, payment_date')
         .eq('user_id', user.id)
 
-    if (!loans || !payments) return null
+    if (!loans && !payments) return null  // Only null if not authenticated
+
+    const safeLoans = loans || []
+    const safePayments = payments || []
 
     // Last 6 months interval
     const endDate = new Date()
@@ -32,11 +35,11 @@ export async function getReportData() {
         const monthKey = format(monthDate, 'yyyy-MM')
         const monthLabel = format(monthDate, 'MMM', { locale: es })
 
-        const lent = loans
+        const lent = safeLoans
             .filter(l => l.loan_date.startsWith(monthKey))
             .reduce((sum, l) => sum + Number(l.amount), 0)
 
-        const collected = payments
+        const collected = safePayments
             .filter(p => p.payment_date.startsWith(monthKey))
             .reduce((sum, p) => sum + Number(p.amount), 0)
 
@@ -48,8 +51,8 @@ export async function getReportData() {
         }
     })
 
-    const totalLent = loans.reduce((sum, l) => sum + Number(l.amount), 0)
-    const totalCollected = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalLent = safeLoans.reduce((sum, l) => sum + Number(l.amount), 0)
+    const totalCollected = safePayments.reduce((sum, p) => sum + Number(p.amount), 0)
 
     return {
         monthlyData,

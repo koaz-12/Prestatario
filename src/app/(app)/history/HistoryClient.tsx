@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { LoanCard } from '@/components/loans/LoanCard'
 import { TopHeader } from '@/components/navigation/TopHeader'
 import { Clock, Search } from 'lucide-react'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Loan } from '@/lib/types'
+
+const PAGE_SIZE = 10
 
 interface HistoryClientProps {
     loans: Loan[]
@@ -15,11 +18,18 @@ interface HistoryClientProps {
 
 export function HistoryClient({ loans, currency }: HistoryClientProps) {
     const [search, setSearch] = useState('')
+    const [page, setPage] = useState(1)
 
     const filteredLoans = loans.filter(loan =>
         loan.borrower_name.toLowerCase().includes(search.toLowerCase()) ||
         (loan.description && loan.description.toLowerCase().includes(search.toLowerCase()))
     )
+
+    const totalPages = Math.ceil(filteredLoans.length / PAGE_SIZE)
+    const paginatedLoans = filteredLoans.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+    // Reset to page 1 when search changes
+    useEffect(() => { setPage(1) }, [search])
 
     return (
         <div>
@@ -44,9 +54,10 @@ export function HistoryClient({ loans, currency }: HistoryClientProps) {
                     </Card>
                 ) : (
                     <div className="space-y-3">
-                        {filteredLoans.map((loan) => (
+                        {paginatedLoans.map((loan) => (
                             <LoanCard key={loan.id} loan={loan} currency={currency} />
                         ))}
+                        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
                     </div>
                 )}
             </div>

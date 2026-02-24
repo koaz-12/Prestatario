@@ -16,7 +16,10 @@ import {
 import { formatMoney } from '@/lib/utils'
 import { cacheLoans, getCachedLoans } from '@/lib/offline/db'
 import { useOnlineStatus } from '@/lib/offline/useOnlineStatus'
+import { Pagination } from '@/components/ui/Pagination'
 import type { DashboardStats, Loan, Contact } from '@/lib/types'
+
+const PAGE_SIZE = 10
 
 interface DashboardClientProps {
     stats: DashboardStats
@@ -26,6 +29,7 @@ interface DashboardClientProps {
 
 export function DashboardClient({ stats, loans: serverLoans, currency }: DashboardClientProps) {
     const [search, setSearch] = useState('')
+    const [page, setPage] = useState(1)
     const [loans, setLoans] = useState<(Loan & { contact?: Contact | null })[]>(serverLoans)
     const isOnline = useOnlineStatus()
 
@@ -46,6 +50,12 @@ export function DashboardClient({ stats, loans: serverLoans, currency }: Dashboa
         loan.borrower_name.toLowerCase().includes(search.toLowerCase()) ||
         (loan.description && loan.description.toLowerCase().includes(search.toLowerCase()))
     )
+
+    const totalPages = Math.ceil(filteredLoans.length / PAGE_SIZE)
+    const paginatedLoans = filteredLoans.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+    // Reset to page 1 when search changes
+    useEffect(() => { setPage(1) }, [search])
 
     // Group debts by person
     const debtByPerson = useMemo(() => {
@@ -173,9 +183,10 @@ export function DashboardClient({ stats, loans: serverLoans, currency }: Dashboa
                         </Card>
                     ) : (
                         <div className="space-y-3">
-                            {filteredLoans.map((loan) => (
+                            {paginatedLoans.map((loan) => (
                                 <LoanCard key={loan.id} loan={loan} currency={currency} />
                             ))}
+                            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
                         </div>
                     )}
                 </div>

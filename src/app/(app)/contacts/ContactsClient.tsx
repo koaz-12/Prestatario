@@ -27,6 +27,7 @@ import {
     UserPlus,
     StickyNote,
 } from 'lucide-react'
+import { Pagination } from '@/components/ui/Pagination'
 import { createContact, deleteContact, updateContact } from '@/app/actions/contacts'
 import { cacheContacts, getCachedContacts } from '@/lib/offline/db'
 import { useOnlineStatus } from '@/lib/offline/useOnlineStatus'
@@ -38,6 +39,7 @@ interface ContactsClientProps {
 
 export function ContactsClient({ contacts: initialContacts }: ContactsClientProps) {
     const [search, setSearch] = useState('')
+    const [page, setPage] = useState(1)
     const [isPending, startTransition] = useTransition()
     const [addOpen, setAddOpen] = useState(false)
     const [editOpen, setEditOpen] = useState(false)
@@ -61,6 +63,12 @@ export function ContactsClient({ contacts: initialContacts }: ContactsClientProp
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         (c.phone && c.phone.includes(search))
     )
+
+    const PAGE_SIZE = 10
+    const totalPages = Math.ceil(filteredContacts.length / PAGE_SIZE)
+    const paginatedContacts = filteredContacts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+    useEffect(() => { setPage(1) }, [search])
 
     async function handleCreate(formData: FormData) {
         setError(null)
@@ -201,7 +209,7 @@ export function ContactsClient({ contacts: initialContacts }: ContactsClientProp
                     </Card>
                 ) : (
                     <div className="space-y-2">
-                        {filteredContacts.map((contact) => (
+                        {paginatedContacts.map((contact) => (
                             <Card
                                 key={contact.id}
                                 className="p-4 border-zinc-800 bg-zinc-900/60 backdrop-blur-sm"
@@ -247,6 +255,7 @@ export function ContactsClient({ contacts: initialContacts }: ContactsClientProp
                                 </div>
                             </Card>
                         ))}
+                        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
                     </div>
                 )}
 
