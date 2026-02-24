@@ -30,6 +30,9 @@ export type Loan = {
     due_date: string | null
     returned_date: string | null
     status: 'active' | 'returned' | 'overdue'
+    interest_rate: number | null
+    installments: number | null
+    tags: string[] | null
     created_at: string
     updated_at: string
     // Joined fields

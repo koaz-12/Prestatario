@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { markAsReturned, deleteLoan } from '@/app/actions/loans'
 import { getAttachments } from '@/app/actions/attachments'
-import { addPayment, getPayments } from '@/app/actions/payments'
+import { addPayment, getPayments, deletePayment } from '@/app/actions/payments'
 import { LoanAttachments } from '@/components/loans/LoanAttachments'
 import { formatAmount, formatMoney } from '@/lib/utils'
 import type { Loan, Contact, LoanAttachment, LoanPayment } from '@/lib/types'
@@ -278,9 +278,28 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                                             <span className="font-medium text-emerald-400">{formatMoney(Number(p.amount), currency)}</span>
                                             {p.notes && <span className="text-zinc-600 text-[9px] truncate max-w-[150px]">{p.notes}</span>}
                                         </div>
-                                        <span className="text-zinc-600 text-[10px] uppercase font-mono">
-                                            {format(new Date(p.payment_date), 'dd MMM', { locale: es })}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-zinc-600 text-[10px] uppercase font-mono">
+                                                {format(new Date(p.payment_date), 'dd MMM', { locale: es })}
+                                            </span>
+                                            {!p.id.startsWith('temp-') && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (confirm('¿Deshacer este abono?')) {
+                                                            startTransition(async () => {
+                                                                await deletePayment(p.id, loan.id)
+                                                                const payData = await getPayments(loan.id)
+                                                                setPayments(payData)
+                                                            })
+                                                        }
+                                                    }}
+                                                    className="p-1 text-zinc-700 hover:text-red-400 transition-colors rounded"
+                                                    title="Deshacer abono"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

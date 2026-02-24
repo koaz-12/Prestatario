@@ -18,6 +18,7 @@ import { LoanAttachments } from '@/components/loans/LoanAttachments'
 import { formatAmount } from '@/lib/utils'
 import { addDays, addWeeks, addMonths, format } from 'date-fns'
 import type { Contact } from '@/lib/types'
+import { TagSelector } from '@/components/ui/TagSelector'
 
 const DATE_SUGGESTIONS = [
     { label: '1 sem', getValue: () => addWeeks(new Date(), 1) },
@@ -55,7 +56,9 @@ export function NewLoanSheet({ open, onOpenChange }: NewLoanSheetProps) {
     const [dueDate, setDueDate] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
-
+    const [interestRate, setInterestRate] = useState('')
+    const [installments, setInstallments] = useState('1')
+    const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [amount, setAmount] = useState('')
 
     // Image selection state
@@ -99,6 +102,11 @@ export function NewLoanSheet({ open, onOpenChange }: NewLoanSheetProps) {
         const cleanAmount = amount.replace(/,/g, '')
         formData.set('amount', cleanAmount)
 
+        // Interest and installments
+        if (interestRate) formData.set('interestRate', interestRate)
+        if (installments) formData.set('installments', installments)
+        if (selectedTags.length > 0) formData.set('tags', JSON.stringify(selectedTags))
+
         if (dueDate) formData.set('dueDate', dueDate)
 
         startTransition(async () => {
@@ -127,6 +135,7 @@ export function NewLoanSheet({ open, onOpenChange }: NewLoanSheetProps) {
         setTimeout(() => {
             setBorrowerName(''); setSelectedContact(''); setDueDate('')
             setError(null); setCreatedLoanId(null); setSelectedFiles([])
+            setInterestRate(''); setInstallments('1'); setSelectedTags([])
         }, 300)
     }
 
@@ -247,6 +256,11 @@ export function NewLoanSheet({ open, onOpenChange }: NewLoanSheetProps) {
                                 />
                             </FieldGroup>
 
+                            {/* Tags */}
+                            <FieldGroup icon={<span className="text-xs leading-none">🏷️</span>} label="Etiquetas (opcional)">
+                                <TagSelector selected={selectedTags} onChange={setSelectedTags} />
+                            </FieldGroup>
+
                             {/* Dates */}
                             <FieldGroup icon={<Calendar className="w-4 h-4 text-zinc-400" />} label="Fechas">
                                 <div className="grid grid-cols-2 gap-2">
@@ -292,6 +306,64 @@ export function NewLoanSheet({ open, onOpenChange }: NewLoanSheetProps) {
                                         })}
                                     </div>
                                 </div>
+                            </FieldGroup>
+
+                            {/* Interest & Installments */}
+                            <FieldGroup icon={<span className="text-amber-400 font-bold text-sm">%</span>} label="Interés y Cuotas (opcional)">
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <p className="text-[10px] text-zinc-600 mb-1">Interés mensual (%)</p>
+                                        <Input
+                                            type="number"
+                                            inputMode="decimal"
+                                            placeholder="0"
+                                            min="0"
+                                            max="100"
+                                            step="0.5"
+                                            value={interestRate}
+                                            onChange={e => setInterestRate(e.target.value)}
+                                            className="h-10 bg-zinc-900/80 border-zinc-700/60 text-zinc-100 rounded-xl text-sm focus:ring-amber-500/30 focus:border-amber-500/50"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-zinc-600 mb-1">Número de cuotas</p>
+                                        <Input
+                                            type="number"
+                                            inputMode="numeric"
+                                            placeholder="1"
+                                            min="1"
+                                            value={installments}
+                                            onChange={e => setInstallments(e.target.value)}
+                                            className="h-10 bg-zinc-900/80 border-zinc-700/60 text-zinc-100 rounded-xl text-sm focus:ring-amber-500/30 focus:border-amber-500/50"
+                                        />
+                                    </div>
+                                </div>
+                                {interestRate && parseFloat(interestRate) > 0 && amount && (() => {
+                                    const principal = parseFloat(amount.replace(/,/g, '')) || 0
+                                    const rate = parseFloat(interestRate) / 100
+                                    const months = parseInt(installments) || 1
+                                    const totalInterest = principal * rate * months
+                                    const totalToPay = principal + totalInterest
+                                    const perInstallment = totalToPay / months
+                                    return (
+                                        <div className="mt-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-1">
+                                            <div className="flex justify-between">
+                                                <span className="text-zinc-500">Interés total:</span>
+                                                <span className="text-amber-400 font-bold">${totalInterest.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-zinc-500">Total a devolver:</span>
+                                                <span className="text-zinc-100 font-bold">${totalToPay.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            {months > 1 && (
+                                                <div className="flex justify-between border-t border-amber-500/10 pt-1 mt-1">
+                                                    <span className="text-zinc-500">Cuota mensual:</span>
+                                                    <span className="text-emerald-400 font-bold">${perInstallment.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                             </FieldGroup>
 
                             {/* Images / Evidence */}

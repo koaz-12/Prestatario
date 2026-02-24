@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { LoanCard } from '@/components/loans/LoanCard'
@@ -14,7 +14,9 @@ import {
     HandCoins,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
-import type { DashboardStats, Loan } from '@/lib/types'
+import { cacheLoans, getCachedLoans } from '@/lib/offline/db'
+import { useOnlineStatus } from '@/lib/offline/useOnlineStatus'
+import type { DashboardStats, Loan, Contact } from '@/lib/types'
 
 interface DashboardClientProps {
     stats: DashboardStats
@@ -22,8 +24,23 @@ interface DashboardClientProps {
     currency: string
 }
 
-export function DashboardClient({ stats, loans, currency }: DashboardClientProps) {
+export function DashboardClient({ stats, loans: serverLoans, currency }: DashboardClientProps) {
     const [search, setSearch] = useState('')
+    const [loans, setLoans] = useState<(Loan & { contact?: Contact | null })[]>(serverLoans)
+    const isOnline = useOnlineStatus()
+
+    useEffect(() => {
+        if (serverLoans.length > 0) {
+            // Cache fresh data
+            cacheLoans(serverLoans)
+            setLoans(serverLoans)
+        } else if (!isOnline) {
+            // Load from cache
+            getCachedLoans().then(cached => {
+                if (cached.length > 0) setLoans(cached)
+            })
+        }
+    }, [serverLoans, isOnline])
 
     const filteredLoans = loans.filter(loan =>
         loan.borrower_name.toLowerCase().includes(search.toLowerCase()) ||

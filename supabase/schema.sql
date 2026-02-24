@@ -77,7 +77,10 @@ create table if not exists public.loans (
   contact_id uuid references public.contacts(id) on delete set null,
   borrower_name text not null,
   amount decimal(12,2) not null check (amount > 0),
-  total_paid decimal(12,2) default 0, -- Nueva columna para abonos
+  total_paid decimal(12,2) default 0,
+  interest_rate decimal(5,2) default 0,
+  installments integer default 1,
+  tags text[] default '{}',
   description text,
   loan_date date default current_date not null,
   due_date date,
@@ -131,3 +134,10 @@ create policy "Users manage own attachments" on public.loan_attachments
 create index if not exists idx_loans_user_status on public.loans(user_id, status);
 create index if not exists idx_loans_contact on public.loans(contact_id);
 create index if not exists idx_contacts_user on public.contacts(user_id);
+
+-- =============================================
+-- MIGRATION (run these on existing databases)
+-- =============================================
+ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS interest_rate decimal(5,2) DEFAULT 0;
+ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS installments integer DEFAULT 1;
+ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';

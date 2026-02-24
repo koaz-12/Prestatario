@@ -66,6 +66,10 @@ export async function createLoan(formData: FormData) {
     const loanDate = formData.get('loanDate') as string
     const dueDate = formData.get('dueDate') as string || null
     const contactId = formData.get('contactId') as string || null
+    const interestRate = formData.get('interestRate') ? parseFloat(formData.get('interestRate') as string) : 0
+    const installments = formData.get('installments') ? parseInt(formData.get('installments') as string) : 1
+    const tagsRaw = formData.get('tags') as string
+    const tags = tagsRaw ? JSON.parse(tagsRaw) : []
 
     if (!borrowerName || !amount || !loanDate) {
         return { error: 'Faltan campos requeridos' }
@@ -80,6 +84,9 @@ export async function createLoan(formData: FormData) {
         loan_date: loanDate,
         due_date: dueDate || null,
         status: 'active',
+        interest_rate: interestRate,
+        installments: installments,
+        tags: tags,
     }).select('id').single()
 
     if (error) {

@@ -9,9 +9,11 @@ import {
     Calendar,
     ArrowUpRight,
     ArrowDownRight,
-    Wallet
+    Wallet,
+    Download
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 interface ReportData {
     monthlyData: {
@@ -80,6 +82,11 @@ export function ReportsClient({ data, currency }: ReportsClientProps) {
                             <Calendar className="w-4 h-4 text-zinc-500" />
                             <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Flujo Mensual</h2>
                         </div>
+                        <a href="/api/export/loans" download>
+                            <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 text-xs">
+                                <Download className="w-3 h-3 mr-1" /> Excel
+                            </Button>
+                        </a>
                     </div>
 
                     <Card className="p-6 border-zinc-800 bg-zinc-900/40 backdrop-blur-sm space-y-8">

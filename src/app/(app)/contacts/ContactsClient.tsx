@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,8 @@ import {
     StickyNote,
 } from 'lucide-react'
 import { createContact, deleteContact, updateContact } from '@/app/actions/contacts'
+import { cacheContacts, getCachedContacts } from '@/lib/offline/db'
+import { useOnlineStatus } from '@/lib/offline/useOnlineStatus'
 import type { Contact } from '@/lib/types'
 
 interface ContactsClientProps {
@@ -41,8 +43,21 @@ export function ContactsClient({ contacts: initialContacts }: ContactsClientProp
     const [editOpen, setEditOpen] = useState(false)
     const [editingContact, setEditingContact] = useState<Contact | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [contacts, setContacts] = useState<Contact[]>(initialContacts)
+    const isOnline = useOnlineStatus()
 
-    const filteredContacts = initialContacts.filter(c =>
+    useEffect(() => {
+        if (initialContacts.length > 0) {
+            cacheContacts(initialContacts)
+            setContacts(initialContacts)
+        } else if (!isOnline) {
+            getCachedContacts().then(cached => {
+                if (cached.length > 0) setContacts(cached)
+            })
+        }
+    }, [initialContacts, isOnline])
+
+    const filteredContacts = contacts.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         (c.phone && c.phone.includes(search))
     )
