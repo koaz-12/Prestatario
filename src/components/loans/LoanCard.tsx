@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useOptimistic } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Card } from '@/components/ui/card'
@@ -52,32 +52,49 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
         setPaymentAmount(formatAmount(e.target.value))
     }
 
-    const totalPaid = Number(loan.total_paid || 0)
-    const totalAmount = Number(loan.amount)
+    const [optimisticLoan, setOptimisticLoan] = useOptimistic(
+        loan,
+        (state, newAmount: number) => ({
+            ...state,
+            total_paid: Number(state.total_paid || 0) + newAmount,
+            status: (Number(state.total_paid || 0) + newAmount) >= Number(state.amount) ? 'returned' : state.status
+        })
+    )
+
+    const [optimisticPayments, setOptimisticPayments] = useOptimistic(
+        payments || [],
+        (state, newPayment: LoanPayment) => [newPayment, ...state]
+    )
+
+    const totalPaid = Number(optimisticLoan.total_paid || 0)
+    const totalAmount = Number(optimisticLoan.amount)
     const remaining = totalAmount - totalPaid
     const progress = Math.min(100, (totalPaid / totalAmount) * 100)
 
-    const isOverdue = loan.due_date && new Date(loan.due_date) < new Date() && loan.status === 'active'
-    const statusColor = loan.status === 'returned'
+    const isOverdue = optimisticLoan.due_date && new Date(optimisticLoan.due_date) < new Date() && optimisticLoan.status === 'active'
+    const statusColor = optimisticLoan.status === 'returned'
         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
         : isOverdue
             ? 'bg-red-500/10 text-red-400 border-red-500/20'
             : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
 
-    const statusLabel = loan.status === 'returned' ? 'Devuelto' : isOverdue ? 'Vencido' : 'Activo'
+    const statusLabel = optimisticLoan.status === 'returned' ? 'Devuelto' : isOverdue ? 'Vencido' : 'Activo'
 
     async function handleExpand() {
         const next = !expanded
         setExpanded(next)
         if (next && (attachments === null || payments === null)) {
             setLoadingData(true)
-            const [attData, payData] = await Promise.all([
-                getAttachments(loan.id),
-                getPayments(loan.id)
-            ])
-            setAttachments(attData)
-            setPayments(payData)
-            setLoadingData(false)
+            try {
+                const [attData, payData] = await Promise.all([
+                    getAttachments(loan.id),
+                    getPayments(loan.id)
+                ])
+                setAttachments(attData)
+                setPayments(payData)
+            } finally {
+                setLoadingData(false)
+            }
         }
     }
 
@@ -98,12 +115,24 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
         if (isNaN(amount) || amount <= 0) return
 
         startTransition(async () => {
+            // Add optimistic payment
+            setOptimisticLoan(amount)
+            setOptimisticPayments({
+                id: 'temp-' + Date.now(),
+                loan_id: loan.id,
+                user_id: '',
+                amount: amount,
+                notes: paymentNotes || null,
+                payment_date: new Date().toISOString(),
+                created_at: new Date().toISOString()
+            })
+
             const result = await addPayment(loan.id, amount, paymentNotes)
             if (result.success) {
                 setShowPaymentForm(false)
                 setPaymentAmount('')
                 setPaymentNotes('')
-                // Refresh data
+                // Refresh data to get actual IDs and sync
                 const payData = await getPayments(loan.id)
                 setPayments(payData)
             }
@@ -143,13 +172,13 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <User className="w-4 h-4 text-zinc-500 shrink-0" />
-                                <span className="text-zinc-100 font-semibold truncate">{loan.borrower_name}</span>
+                                <span className="text-zinc-100 font-semibold truncate">{optimisticLoan.borrower_name}</span>
                             </div>
                             <div className="flex items-baseline gap-2">
-                                <span className={`text-xl font-bold ${loan.status === 'returned' ? 'text-zinc-500 line-through' : 'text-emerald-400'}`}>
+                                <span className={`text-xl font-bold ${optimisticLoan.status === 'returned' ? 'text-zinc-500 line-through' : 'text-emerald-400'}`}>
                                     {formatMoney(totalAmount, currency)}
                                 </span>
-                                {totalPaid > 0 && loan.status !== 'returned' && (
+                                {totalPaid > 0 && optimisticLoan.status !== 'returned' && (
                                     <span className="text-xs text-emerald-500 font-medium">
                                         (Pendiente: {formatMoney(remaining, currency)})
                                     </span>
@@ -166,7 +195,7 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                     </div>
 
                     {/* Progress Bar (if active and has payments) */}
-                    {loan.status === 'active' && totalPaid > 0 && (
+                    {optimisticLoan.status === 'active' && totalPaid > 0 && (
                         <div className="mt-3 h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
                             <div
                                 className="h-full bg-emerald-500 transition-all duration-500"
@@ -175,20 +204,20 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                         </div>
                     )}
 
-                    {loan.description && (
-                        <p className="text-zinc-500 text-sm mt-3 leading-relaxed border-t border-zinc-800/30 pt-2">{loan.description}</p>
+                    {optimisticLoan.description && (
+                        <p className="text-zinc-500 text-sm mt-3 leading-relaxed border-t border-zinc-800/30 pt-2">{optimisticLoan.description}</p>
                     )}
 
                     <div className="flex items-center gap-4 mt-3 text-xs text-zinc-500">
                         <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            <span>{format(new Date(loan.loan_date), 'dd MMM yyyy', { locale: es })}</span>
+                            <span>{format(new Date(optimisticLoan.loan_date), 'dd MMM yyyy', { locale: es })}</span>
                         </div>
-                        {loan.due_date && (
+                        {optimisticLoan.due_date && (
                             <div className="flex items-center gap-1">
                                 <span className="text-zinc-600">→</span>
                                 <span className={isOverdue ? 'text-red-400' : ''}>
-                                    {format(new Date(loan.due_date), 'dd MMM yyyy', { locale: es })}
+                                    {format(new Date(optimisticLoan.due_date), 'dd MMM yyyy', { locale: es })}
                                 </span>
                             </div>
                         )}
@@ -218,11 +247,11 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                         </div>
                     )}
 
-                    {loan.status === 'returned' && (
+                    {optimisticLoan.status === 'returned' && (
                         <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-800/50">
                             <div className="flex items-center gap-2 text-emerald-400 text-sm">
                                 <CheckCircle2 className="w-4 h-4" />
-                                <span>Pagado el {loan.returned_date && format(new Date(loan.returned_date), 'dd MMM yyyy', { locale: es })}</span>
+                                <span>Pagado el {optimisticLoan.returned_date && format(new Date(optimisticLoan.returned_date), 'dd MMM yyyy', { locale: es })}</span>
                             </div>
                             <Button onClick={handleDelete} disabled={isPending} size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-500 hover:text-red-400 hover:bg-red-500/10">
                                 <Trash2 className="w-4 h-4" />
@@ -231,7 +260,7 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                     )}
 
                     {/* Payment History Section */}
-                    {totalPaid > 0 && payments && (
+                    {totalPaid > 0 && optimisticPayments && (
                         <div className="px-4 py-3 bg-zinc-950/40">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-1.5 text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
@@ -239,11 +268,11 @@ export function LoanCard({ loan, showActions = true, currency = 'DOP' }: LoanCar
                                     <span>Historial de abonos</span>
                                 </div>
                                 <span className="text-[10px] text-zinc-500 font-medium">
-                                    Total pagado: ${totalPaid.toLocaleString('es-DO')}
+                                    Total pagado: {formatMoney(totalPaid, currency)}
                                 </span>
                             </div>
                             <div className="space-y-1.5">
-                                {payments.map(p => (
+                                {optimisticPayments.map(p => (
                                     <div key={p.id} className="flex items-center justify-between text-xs py-1.5 border-b border-zinc-800/30 last:border-0">
                                         <div className="flex flex-col">
                                             <span className="font-medium text-emerald-400">{formatMoney(Number(p.amount), currency)}</span>

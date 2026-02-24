@@ -1,32 +1,79 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from '@/app/auth/actions'
+import { updatePassword } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { HandCoins, Loader2, Eye, EyeOff } from 'lucide-react'
+import { HandCoins, Loader2, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState(false)
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+    const router = useRouter()
 
     async function handleSubmit(formData: FormData) {
         setLoading(true)
         setError(null)
-        const result = await signIn(formData)
+
+        const password = formData.get('password') as string
+        const confirmPassword = formData.get('confirmPassword') as string
+
+        if (password !== confirmPassword) {
+            setError('Las contraseñas no coinciden')
+            setLoading(false)
+            return
+        }
+
+        const result = await updatePassword(formData)
+
         if (result?.error) {
             setError(result.error)
             setLoading(false)
+        } else {
+            setSuccess(true)
+            setLoading(false)
+            // Redirect after 3 seconds
+            setTimeout(() => {
+                router.push('/dashboard')
+            }, 3000)
         }
+    }
+
+    if (success) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+                <Card className="w-full max-w-sm border-zinc-800 bg-zinc-900/80 backdrop-blur-xl shadow-2xl">
+                    <CardHeader className="text-center space-y-4">
+                        <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-2xl font-bold text-zinc-100">Contraseña actualizada</CardTitle>
+                            <CardDescription className="text-zinc-400 mt-1">
+                                Tu contraseña ha sido cambiada exitosamente. Serás redirigido en unos segundos...
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <Link href="/dashboard">
+                            <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white">
+                                Ir al Dashboard
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
-            {/* Background glow */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px]" />
             </div>
@@ -37,9 +84,9 @@ export default function LoginPage() {
                         <HandCoins className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                        <CardTitle className="text-2xl font-bold text-zinc-100">Prestatario</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-zinc-100">Nueva contraseña</CardTitle>
                         <CardDescription className="text-zinc-400 mt-1">
-                            Inicia sesión en tu cuenta
+                            Elige una clave segura para tu cuenta
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -51,26 +98,7 @@ export default function LoginPage() {
                             </div>
                         )}
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-zinc-300">Correo electrónico</Label>
-                            <Input
-                                id="email"
-                                name="email"
-                                type="email"
-                                placeholder="tu@email.com"
-                                required
-                                className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password" className="text-zinc-300">Contraseña</Label>
-                                <Link
-                                    href="/forgot-password"
-                                    className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                                >
-                                    ¿Olvidaste tu contraseña?
-                                </Link>
-                            </div>
+                            <Label htmlFor="password" className="text-zinc-300">Nueva contraseña</Label>
                             <div className="relative">
                                 <Input
                                     id="password"
@@ -78,7 +106,7 @@ export default function LoginPage() {
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="••••••••"
                                     required
-                                    className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20 pr-10"
+                                    className="bg-zinc-800/50 border-zinc-700 text-zinc-100 focus:border-emerald-500 focus:ring-emerald-500/20 pr-10"
                                 />
                                 <button
                                     type="button"
@@ -89,6 +117,17 @@ export default function LoginPage() {
                                 </button>
                             </div>
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="confirmPassword" className="text-zinc-300">Confirmar contraseña</Label>
+                            <Input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                required
+                                className="bg-zinc-800/50 border-zinc-700 text-zinc-100 focus:border-emerald-500 focus:ring-emerald-500/20"
+                            />
+                        </div>
                         <Button
                             type="submit"
                             disabled={loading}
@@ -97,21 +136,13 @@ export default function LoginPage() {
                             {loading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Ingresando...
+                                    Actualizando...
                                 </>
                             ) : (
-                                'Iniciar Sesión'
+                                'Cambiar contraseña'
                             )}
                         </Button>
                     </form>
-                    <div className="mt-6 text-center">
-                        <p className="text-zinc-500 text-sm">
-                            ¿No tienes cuenta?{' '}
-                            <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                                Regístrate
-                            </Link>
-                        </p>
-                    </div>
                 </CardContent>
             </Card>
         </div>

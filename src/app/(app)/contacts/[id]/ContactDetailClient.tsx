@@ -12,7 +12,8 @@ import {
     HandCoins,
     History,
     Calendar,
-    ArrowUpRight
+    ArrowUpRight,
+    FileText
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -75,6 +76,15 @@ export function ContactDetailClient({ detail, currency }: ContactDetailClientPro
                             </div>
                         </div>
                     </div>
+                    <Link href={`/statement/${contact.id}`} target="_blank">
+                        <Button variant="outline" size="sm" className="hidden sm:flex border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-all">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Estado de Cuenta
+                        </Button>
+                        <Button variant="outline" size="icon" className="flex sm:hidden border-zinc-700 text-zinc-400 h-10 w-10">
+                            <FileText className="w-4 h-4" />
+                        </Button>
+                    </Link>
                 </div>
             </div>
 

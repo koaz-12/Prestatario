@@ -1,32 +1,67 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from '@/app/auth/actions'
+import { forgotPassword } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { HandCoins, Loader2, Eye, EyeOff } from 'lucide-react'
+import { HandCoins, Loader2, ArrowLeft, MailCheck } from 'lucide-react'
 import Link from 'next/link'
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [showPassword, setShowPassword] = useState(false)
 
     async function handleSubmit(formData: FormData) {
         setLoading(true)
         setError(null)
-        const result = await signIn(formData)
+
+        // Add origin for redirection
+        const origin = window.location.origin
+        formData.append('origin', origin)
+
+        const result = await forgotPassword(formData)
+
         if (result?.error) {
             setError(result.error)
+            setLoading(false)
+        } else {
+            setSuccess(true)
             setLoading(false)
         }
     }
 
+    if (success) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+                <Card className="w-full max-w-sm border-zinc-800 bg-zinc-900/80 backdrop-blur-xl shadow-2xl">
+                    <CardHeader className="text-center space-y-4">
+                        <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                            <MailCheck className="w-8 h-8 text-emerald-400" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-2xl font-bold text-zinc-100">Correo enviado</CardTitle>
+                            <CardDescription className="text-zinc-400 mt-1">
+                                Revisa tu bandeja de entrada para restablecer tu contraseña.
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <Link href="/login">
+                            <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                                Volver al inicio
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
-            {/* Background glow */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px]" />
             </div>
@@ -37,9 +72,9 @@ export default function LoginPage() {
                         <HandCoins className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                        <CardTitle className="text-2xl font-bold text-zinc-100">Prestatario</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-zinc-100">Recuperar cuenta</CardTitle>
                         <CardDescription className="text-zinc-400 mt-1">
-                            Inicia sesión en tu cuenta
+                            Te enviaremos un enlace para restablecer tu clave
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -61,34 +96,6 @@ export default function LoginPage() {
                                 className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password" className="text-zinc-300">Contraseña</Label>
-                                <Link
-                                    href="/forgot-password"
-                                    className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                                >
-                                    ¿Olvidaste tu contraseña?
-                                </Link>
-                            </div>
-                            <div className="relative">
-                                <Input
-                                    id="password"
-                                    name="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    placeholder="••••••••"
-                                    required
-                                    className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20 pr-10"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-                                >
-                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                            </div>
-                        </div>
                         <Button
                             type="submit"
                             disabled={loading}
@@ -97,20 +104,18 @@ export default function LoginPage() {
                             {loading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Ingresando...
+                                    Enviando...
                                 </>
                             ) : (
-                                'Iniciar Sesión'
+                                'Enviar enlace'
                             )}
                         </Button>
                     </form>
                     <div className="mt-6 text-center">
-                        <p className="text-zinc-500 text-sm">
-                            ¿No tienes cuenta?{' '}
-                            <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                                Regístrate
-                            </Link>
-                        </p>
+                        <Link href="/login" className="inline-flex items-center text-zinc-500 hover:text-zinc-300 text-sm font-medium transition-colors">
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Volver al inicio
+                        </Link>
                     </div>
                 </CardContent>
             </Card>

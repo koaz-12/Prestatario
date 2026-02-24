@@ -11,9 +11,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen bg-zinc-950 pb-20">
             {children}
-            <DraggableFAB onTap={() => setLoanSheetOpen(true)} />
-            <BottomNav />
-            <NewLoanSheet open={loanSheetOpen} onOpenChange={setLoanSheetOpen} />
+            <div className="print:hidden">
+                <DraggableFAB onTap={() => setLoanSheetOpen(true)} />
+                <BottomNav />
+                <NewLoanSheet open={loanSheetOpen} onOpenChange={setLoanSheetOpen} />
+            </div>
         </div>
     )
 }
